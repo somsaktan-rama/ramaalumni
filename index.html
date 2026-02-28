@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบปรับปรุงข้อมูลสมาชิก RamaAlumni</title>
+    <title>ระบบปรับปรุงข้อมูลสมาชิกรามาธิบดี</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -87,11 +87,11 @@
                             <input type="text" id="e_nameeng" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500">
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">เลข ว. (idmd)</label>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">เลขใบประกอบโรคศิลป์ ว. (idmd)</label>
                             <input type="text" id="e_idmd" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500">
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">HN</label>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">HN รพ.รามาธิบดี</label>
                             <input type="text" id="e_hn" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500">
                         </div>
                         <div class="md:col-span-2">
@@ -321,7 +321,11 @@
         document.getElementById('search-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const classNum = document.getElementById('s_class').value;
+            let classNum = document.getElementById('s_class').value;
+            // แก้ปัญหาค้นหารุ่น 01-09 ไม่เจอ โดยการแปลงตัวเลขเพื่อลบเลข 0 ด้านหน้าออก 
+            // ตัวอย่างเช่น ถ้าพิมพ์ "06" เข้ามา จะถูกแปลงเป็น "6" เพื่อให้ตรงกับข้อมูลใน Sheet
+            classNum = parseInt(classNum, 10).toString();
+            
             const fname = document.getElementById('s_fname').value;
             const lname = document.getElementById('s_lname').value;
 
