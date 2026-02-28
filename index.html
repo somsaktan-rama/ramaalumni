@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบปรับปรุงข้อมูลสมาชิก Ramaalumni</title>
+    <title>ระบบปรับปรุงข้อมูลสมาชิก RamaAlumni</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -19,8 +19,8 @@
     <div class="w-full max-w-lg bg-white rounded-2xl shadow-lg overflow-hidden">
         <!-- Header -->
         <div class="bg-blue-600 text-white p-6 text-center">
-            <h1 class="text-xl font-semibold">ปรับปรุงข้อมูลศิษย์เก่ารามาธิบดี</h1>
-            <p class="text-sm mt-1 text-blue-100" id="user-greeting">กำลังเชื่อมต่อ LINE...</p>
+            <h1 class="text-xl font-semibold">ปรับปรุงข้อมูลศิษย์เก่ารามาธิบดี </h1>
+            <p class="text-sm mt-1 text-blue-100" id="user-greeting">กำลังเตรียมความพร้อม...</p>
         </div>
 
         <div class="p-6 relative">
@@ -41,7 +41,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ (ไม่ระบุคำนำหน้า)</label>
                         <input type="text" id="s_fname" minlength="2" required placeholder="พิมพ์อย่างน้อย 2 ตัวอักษร" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
-                        <p class="text-xs text-gray-500 mt-1">ต้องพิมพ์ชื่อให้ตรงอย่างน้อย 5 ตัวอักษรขึ้นไป</p>
+                        <p class="text-xs text-gray-500 mt-1">พิมพ์ชื่อให้ตรงอย่างน้อย 2 ตัวอักษรขึ้นไป</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">นามสกุล</label>
@@ -52,6 +52,17 @@
                         ค้นหาข้อมูล
                     </button>
                 </form>
+            </div>
+
+            <!-- หน้าที่ 1.5: แสดงรายการให้เลือก (กรณีพบหลายคน) -->
+            <div id="select-section" class="hidden space-y-4">
+                <h2 class="text-lg font-bold text-gray-800 text-center mb-4">พบข้อมูลมากกว่า 1 รายการ<br><span class="text-sm font-normal text-gray-500">กรุณาเลือกรายชื่อที่ต้องการแก้ไข</span></h2>
+                <div id="user-list" class="space-y-3 max-h-80 overflow-y-auto pr-2">
+                    <!-- รายชื่อจะถูกเติมที่นี่จาก JavaScript -->
+                </div>
+                <button type="button" onclick="cancelSelect()" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-3 rounded-lg transition mt-4">
+                    กลับไปค้นหาใหม่
+                </button>
             </div>
 
             <!-- หน้าที่ 2: ฟอร์มแก้ไขข้อมูล -->
@@ -66,7 +77,6 @@
                 </div>
 
                 <form id="update-form" class="space-y-4">
-                    <!-- Fields: name, nameeng, idmd, hn, offadd, offtel, homeadd, hometel, email, email2, board, subboard, note -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-medium text-gray-500 mb-1">ชื่อใหม่ (ถ้ามี)</label>
@@ -149,14 +159,21 @@
         // ==========================================
 
         let currentUserRowIndex = null;
-        let lineProfile = { displayName: '', userId: '' };
+        let lineProfile = { displayName: 'WebUser', userId: 'None' };
 
-        // โหลด LIFF เมื่อเปิดหน้าเว็บ
+        // โหลดฟังก์ชันเริ่มต้นเมื่อเปิดหน้าเว็บ
         window.onload = function() {
             initializeLiff();
         };
 
         async function initializeLiff() {
+            // ดักจับ Error ไว้ก่อนเลย กรณีที่ยังไม่ได้ตั้งค่า LIFF_ID หรือตั้งเป็นค่าเริ่มต้นไว้
+            if (!LIFF_ID || LIFF_ID === "YOUR_LIFF_ID") {
+                console.warn("ยังไม่ได้ตั้งค่า LIFF ID ใช้งานผ่านเบราว์เซอร์ปกติ");
+                document.getElementById('user-greeting').innerText = "ใช้งานผ่านระบบเว็บ (ไม่เชื่อมต่อ LINE)";
+                return;
+            }
+
             try {
                 await liff.init({ liffId: LIFF_ID });
                 if (liff.isLoggedIn()) {
@@ -165,20 +182,20 @@
                     lineProfile.userId = profile.userId;
                     document.getElementById('user-greeting').innerText = `สวัสดีคุณ ${profile.displayName}`;
                 } else {
-                    document.getElementById('user-greeting').innerText = "ใช้งานผ่านเว็บเบราว์เซอร์ปกติ";
-                    // ปลด Comment ด้านล่างหากบังคับให้ล็อกอิน LINE เสมอ
-                    // liff.login();
+                    document.getElementById('user-greeting').innerText = "กรุณาเปิดลิงก์ผ่านแอป LINE";
+                    // liff.login(); // ปลดคอมเมนต์บรรทัดนี้เพื่อบังคับให้ล็อกอิน
                 }
             } catch (err) {
                 console.error('LIFF Init Error', err);
-                document.getElementById('user-greeting').innerText = "ไม่สามารถเชื่อมต่อ LINE ได้";
+                document.getElementById('user-greeting').innerText = "ใช้งานผ่านเบราว์เซอร์ปกติ";
             }
         }
 
-        // --- ส่วนจัดการ UI ---
+        // --- ส่วนจัดการ UI หน้าจอต่างๆ ---
         const loadingScreen = document.getElementById('loading');
         const loadingText = document.getElementById('loading-text');
         const searchSection = document.getElementById('search-section');
+        const selectSection = document.getElementById('select-section');
         const editSection = document.getElementById('edit-section');
         const alertBox = document.getElementById('alert-box');
 
@@ -205,7 +222,82 @@
             alertBox.classList.add('hidden');
         }
 
-        // --- ค้นหาข้อมูล ---
+        function cancelSelect() {
+            selectSection.classList.add('hidden');
+            searchSection.classList.remove('hidden');
+            alertBox.classList.add('hidden');
+        }
+
+        // สร้างการ์ดรายชื่อกรณีค้นพบหลายคน
+        function showSelectionList(dataArray) {
+            searchSection.classList.add('hidden');
+            editSection.classList.add('hidden');
+            alertBox.classList.add('hidden');
+            
+            const userListDiv = document.getElementById('user-list');
+            userListDiv.innerHTML = '';
+            
+            dataArray.forEach((user) => {
+                const fullName = `${user.prename || ''}${user.fname || ''} ${user.lname || ''}`;
+                const userCard = document.createElement('div');
+                userCard.className = 'p-4 border border-gray-200 rounded-lg hover:bg-blue-50 cursor-pointer flex items-center gap-4 transition shadow-sm bg-white';
+                
+                // เมื่อคลิกที่รายชื่อ จะทำการส่งข้อมูลไปให้ฟอร์มแก้ไข
+                userCard.onclick = () => populateEditForm(user);
+                
+                const picHtml = user.picUrl 
+                    ? `<img src="${user.picUrl}" class="w-12 h-12 rounded-full object-cover border border-gray-200 shrink-0">`
+                    : `<div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 shrink-0"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" /></svg></div>`;
+                
+                userCard.innerHTML = `
+                    ${picHtml}
+                    <div class="overflow-hidden">
+                        <div class="font-medium text-gray-800 truncate">${fullName}</div>
+                        <div class="text-xs text-gray-500 truncate">รุ่น ${user.class || '-'} | เลข ว. ${user.idmd || '-'}</div>
+                    </div>
+                `;
+                userListDiv.appendChild(userCard);
+            });
+            
+            selectSection.classList.remove('hidden');
+        }
+
+        // --- ฟังก์ชันดึงข้อมูลเติมลงในฟอร์มแก้ไข ---
+        function populateEditForm(data) {
+            currentUserRowIndex = data.rowIndex;
+            
+            // แสดงชื่อเต็ม
+            const fullName = `${data.prename || ''}${data.fname || ''} ${data.lname || ''}`;
+            document.getElementById('display-fullname').innerText = fullName;
+
+            // แสดงรูปภาพ
+            const imgEl = document.getElementById('profile-img');
+            const placeholder = document.getElementById('profile-placeholder');
+            if (data.picUrl) {
+                imgEl.src = data.picUrl;
+                imgEl.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            } else {
+                imgEl.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            }
+
+            // เติมข้อมูลในช่อง Input ให้ครบทุก Field
+            const fields = ['name', 'nameeng', 'idmd', 'hn', 'offadd', 'offtel', 'homeadd', 'hometel', 'email', 'email2', 'board', 'subboard', 'note'];
+            fields.forEach(f => {
+                if(document.getElementById(`e_${f}`)) {
+                    document.getElementById(`e_${f}`).value = data[f] || '';
+                }
+            });
+
+            // สลับหน้าจอมาที่หน้าแก้ไข
+            searchSection.classList.add('hidden');
+            selectSection.classList.add('hidden');
+            editSection.classList.remove('hidden');
+            alertBox.classList.add('hidden');
+        }
+
+        // --- ระบบค้นหาข้อมูล (ส่งไป Apps Script) ---
         document.getElementById('search-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -213,6 +305,7 @@
             const fname = document.getElementById('s_fname').value;
             const lname = document.getElementById('s_lname').value;
 
+            // ตรวจสอบขั้นต่ำ 2 ตัวอักษร
             if(fname.length < 2 || lname.length < 2) {
                 showAlert("กรุณาพิมพ์ชื่อและนามสกุลอย่างน้อย 2 ตัวอักษร", "error");
                 return;
@@ -234,53 +327,26 @@
                 
                 const result = await response.json();
                 
-                if (result.success && result.data) {
-                    populateEditForm(result.data);
+                if (result.success && result.data && result.data.length > 0) {
+                    if (result.data.length === 1) {
+                        // เจอคนเดียว ข้ามไปหน้าแก้ไขเลย
+                        populateEditForm(result.data[0]);
+                    } else {
+                        // เจอหลายคน แสดงหน้ารายชื่อให้เลือกก่อน
+                        showSelectionList(result.data);
+                    }
                 } else {
                     showAlert("ไม่พบข้อมูล หรือระบุข้อมูลไม่ตรงเงื่อนไข", "error");
                 }
             } catch (error) {
-                showAlert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์", "error");
+                console.error(error);
+                showAlert("เกิดข้อผิดพลาดในการเชื่อมต่อ หรือคุณยังไม่ได้ใส่ Web App URL", "error");
             } finally {
                 hideLoading();
             }
         });
 
-        // --- เติมข้อมูลลงฟอร์มแก้ไข ---
-        function populateEditForm(data) {
-            currentUserRowIndex = data.rowIndex;
-            
-            // แสดงชื่อเต็ม
-            const fullName = `${data.prename || ''}${data.fname || ''} ${data.lname || ''}`;
-            document.getElementById('display-fullname').innerText = fullName;
-
-            // แสดงรูปภาพ
-            const imgEl = document.getElementById('profile-img');
-            const placeholder = document.getElementById('profile-placeholder');
-            if (data.picUrl) {
-                imgEl.src = data.picUrl;
-                imgEl.classList.remove('hidden');
-                placeholder.classList.add('hidden');
-            } else {
-                imgEl.classList.add('hidden');
-                placeholder.classList.remove('hidden');
-            }
-
-            // เติมข้อมูลในช่อง Input
-            const fields = ['name', 'nameeng', 'idmd', 'hn', 'offadd', 'offtel', 'homeadd', 'hometel', 'email', 'email2', 'board', 'subboard', 'note'];
-            fields.forEach(f => {
-                if(document.getElementById(`e_${f}`)) {
-                    document.getElementById(`e_${f}`).value = data[f] || '';
-                }
-            });
-
-            // สลับหน้าจอ
-            searchSection.classList.add('hidden');
-            editSection.classList.remove('hidden');
-            alertBox.classList.add('hidden');
-        }
-
-        // --- อัปเดตข้อมูล ---
+        // --- ระบบอัปเดตข้อมูล (ส่งไป Apps Script) ---
         document.getElementById('update-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             showLoading("กำลังบันทึกข้อมูล...");
@@ -300,7 +366,7 @@
                 board: document.getElementById('e_board').value,
                 subboard: document.getElementById('e_subboard').value,
                 note: document.getElementById('e_note').value,
-                line_displayName: lineProfile.displayName,
+                line_displayName: lineProfile.displayName, // จะมีค่าถ้าเปิดใน LINE
                 line_uid: lineProfile.userId
             };
 
@@ -319,12 +385,13 @@
                 
                 if (result.success) {
                     showAlert("บันทึกข้อมูลเรียบร้อยแล้ว!", "success");
-                    // กลับไปหน้าแรกหลังจาก 2 วินาที
+                    // กลับไปหน้าแรกหลังจากผ่านไป 2 วินาที
                     setTimeout(() => cancelEdit(), 2000);
                 } else {
-                    showAlert("ไม่สามารถบันทึกข้อมูลได้", "error");
+                    showAlert("ไม่สามารถบันทึกข้อมูลได้: " + result.message, "error");
                 }
             } catch (error) {
+                console.error(error);
                 showAlert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์", "error");
             } finally {
                 hideLoading();
