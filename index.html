@@ -12,6 +12,10 @@
         body { font-family: 'Prompt', sans-serif; background-color: #f3f4f6; }
         .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #3b82f6; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* ซ่อนลูกศรเพิ่ม/ลดตัวเลขในช่อง input type="number" */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
     </style>
 </head>
 <body class="text-gray-800 antialiased p-4 md:p-8 flex justify-center">
@@ -36,7 +40,8 @@
                 <form id="search-form" class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">รุ่น (Class)</label>
-                        <input type="text" id="s_class" pattern="[0-9]{2}" maxlength="2" required placeholder="ตัวเลข 2 หลัก เช่น 69" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                        <!-- เปลี่ยนจาก pattern บังคับ 2 หลักเป็น type="number" เพื่อให้พิมพ์ 6 หรือ 06 ก็ได้ -->
+                        <input type="number" id="s_class" required placeholder="เลขรุ่น เช่น 6 หรือ 69" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ (ไม่ระบุคำนำหน้า)</label>
@@ -87,7 +92,7 @@
                             <input type="text" id="e_nameeng" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500">
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">เลขใบประกอบโรคศิลป์ ว. (idmd)</label>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">เลข ว. (idmd)</label>
                             <input type="text" id="e_idmd" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500">
                         </div>
                         <div>
@@ -322,9 +327,10 @@
             e.preventDefault();
             
             let classNum = document.getElementById('s_class').value;
-            // แก้ปัญหาค้นหารุ่น 01-09 ไม่เจอ โดยการแปลงตัวเลขเพื่อลบเลข 0 ด้านหน้าออก 
-            // ตัวอย่างเช่น ถ้าพิมพ์ "06" เข้ามา จะถูกแปลงเป็น "6" เพื่อให้ตรงกับข้อมูลใน Sheet
-            classNum = parseInt(classNum, 10).toString();
+            // มั่นใจได้ว่าข้อมูลที่ส่งไปจะไม่มีเลข 0 นำหน้า เพื่อให้จับคู่กับเลขใน Google Sheet ได้พอดี
+            if (classNum) {
+                classNum = parseInt(classNum, 10).toString();
+            }
             
             const fname = document.getElementById('s_fname').value;
             const lname = document.getElementById('s_lname').value;
