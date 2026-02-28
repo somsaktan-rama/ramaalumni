@@ -213,8 +213,8 @@
             const fname = document.getElementById('s_fname').value;
             const lname = document.getElementById('s_lname').value;
 
-            if(fname.length < 5 || lname.length < 5) {
-                showAlert("กรุณาพิมพ์ชื่อและนามสกุลอย่างน้อย 5 ตัวอักษร", "error");
+            if(fname.length < 2 || lname.length < 2) {
+                showAlert("กรุณาพิมพ์ชื่อและนามสกุลอย่างน้อย 2 ตัวอักษร", "error");
                 return;
             }
 
