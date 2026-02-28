@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบปรับปรุงข้อมูลสมาชิก Ramaalumni</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- LIFF SDK -->
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap');
+        body { font-family: 'Prompt', sans-serif; background-color: #f3f4f6; }
+        .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #3b82f6; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="text-gray-800 antialiased p-4 md:p-8 flex justify-center">
+
+    <div class="w-full max-w-lg bg-white rounded-2xl shadow-lg overflow-hidden">
+        <!-- Header -->
+        <div class="bg-blue-600 text-white p-6 text-center">
+            <h1 class="text-xl font-semibold">ปรับปรุงข้อมูลศิษย์เก่า</h1>
+            <p class="text-sm mt-1 text-blue-100" id="user-greeting">กำลังเชื่อมต่อ LINE...</p>
+        </div>
+
+        <div class="p-6 relative">
+            
+            <!-- Loading Overlay -->
+            <div id="loading" class="hidden absolute inset-0 bg-white/80 z-50 flex flex-col items-center justify-center rounded-b-2xl">
+                <div class="spinner mb-4"></div>
+                <p class="text-sm font-medium text-gray-600" id="loading-text">กำลังประมวลผล...</p>
+            </div>
+
+            <!-- หน้าที่ 1: ฟอร์มค้นหา -->
+            <div id="search-section">
+                <form id="search-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">รุ่น (Class)</label>
+                        <input type="text" id="s_class" pattern="[0-9]{2}" maxlength="2" required placeholder="ตัวเลข 2 หลัก เช่น 69" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ (ไม่ระบุคำนำหน้า)</label>
+                        <input type="text" id="s_fname" minlength="5" required placeholder="พิมพ์อย่างน้อย 5 ตัวอักษร" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                        <p class="text-xs text-gray-500 mt-1">ต้องพิมพ์ชื่อให้ตรงอย่างน้อย 5 ตัวอักษรขึ้นไป</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">นามสกุล</label>
+                        <input type="text" id="s_lname" minlength="5" required placeholder="พิมพ์อย่างน้อย 5 ตัวอักษร" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition mt-4 shadow-md">
+                        ค้นหาข้อมูล
+                    </button>
+                </form>
+            </div>
+
+            <!-- หน้าที่ 2: ฟอร์มแก้ไขข้อมูล -->
+            <div id="edit-section" class="hidden space-y-5">
+                
+                <div class="flex flex-col items-center mb-6">
+                    <div class="w-32 h-32 rounded-full border-4 border-gray-100 shadow-md overflow-hidden bg-gray-50 flex items-center justify-center mb-3">
+                        <img id="profile-img" src="" alt="Profile Picture" class="w-full h-full object-cover hidden">
+                        <svg id="profile-placeholder" class="w-16 h-16 text-gray-300" fill="currentColor" viewBox="0 0 24 24"><path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                    </div>
+                    <h2 id="display-fullname" class="text-lg font-bold text-gray-800 text-center"></h2>
+                </div>
+
+                <form id="update-form" class="space-y-4">
+                    <!-- Fields: name, nameeng, idmd, hn, offadd, offtel, homeadd, hometel, email, email2, board, subboard, note -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">ชื่อใหม่ (ถ้ามี)</label>
+                            <input type="text" id="e_name" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">ชื่อภาษาอังกฤษ</label>
+                            <input type="text" id="e_nameeng" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">เลข ว. (idmd)</label>
+                            <input type="text" id="e_idmd" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">HN</label>
+                            <input type="text" id="e_hn" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-gray-500 mb-1">ที่ทำงาน</label>
+                            <textarea id="e_offadd" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">เบอร์ที่ทำงาน</label>
+                            <input type="tel" id="e_offtel" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-gray-500 mb-1">ที่อยู่บ้าน</label>
+                            <textarea id="e_homeadd" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">เบอร์บ้าน/มือถือ</label>
+                            <input type="tel" id="e_hometel" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                            <input type="email" id="e_email" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Email สำรอง</label>
+                            <input type="email" id="e_email2" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">เฉพาะทาง (board)</label>
+                            <input type="text" id="e_board" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">อนุสาขา (subboard)</label>
+                            <input type="text" id="e_subboard" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-gray-500 mb-1">หมายเหตุ (note)</label>
+                            <input type="text" id="e_note" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 mt-6 pt-4 border-t">
+                        <button type="button" onclick="cancelEdit()" class="w-1/3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-3 rounded-lg transition">
+                            ยกเลิก
+                        </button>
+                        <button type="submit" class="w-2/3 bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg transition shadow-md">
+                            บันทึกข้อมูล
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- แจ้งเตือนข้อความ -->
+            <div id="alert-box" class="hidden mt-4 p-4 rounded-lg text-sm font-medium text-center"></div>
+
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // ตั้งค่า URL ของ Google Apps Script ที่ Deploy ได้
+        const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxpz3yDVzvDnPOAZ5MKXYFezP97F8r4RuTCgZQBW9eJoo9twINRv8OrYqDMIv1TTXk/exec"; 
+        
+        // ตั้งค่า LIFF ID ของคุณ
+        const LIFF_ID = "2009266904-HNFVPDlF"; 
+        // ==========================================
+
+        let currentUserRowIndex = null;
+        let lineProfile = { displayName: '', userId: '' };
+
+        // โหลด LIFF เมื่อเปิดหน้าเว็บ
+        window.onload = function() {
+            initializeLiff();
+        };
+
+        async function initializeLiff() {
+            try {
+                await liff.init({ liffId: LIFF_ID });
+                if (liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+                    lineProfile.displayName = profile.displayName;
+                    lineProfile.userId = profile.userId;
+                    document.getElementById('user-greeting').innerText = `สวัสดีคุณ ${profile.displayName}`;
+                } else {
+                    document.getElementById('user-greeting').innerText = "ใช้งานผ่านเว็บเบราว์เซอร์ปกติ";
+                    // ปลด Comment ด้านล่างหากบังคับให้ล็อกอิน LINE เสมอ
+                    // liff.login();
+                }
+            } catch (err) {
+                console.error('LIFF Init Error', err);
+                document.getElementById('user-greeting').innerText = "ไม่สามารถเชื่อมต่อ LINE ได้";
+            }
+        }
+
+        // --- ส่วนจัดการ UI ---
+        const loadingScreen = document.getElementById('loading');
+        const loadingText = document.getElementById('loading-text');
+        const searchSection = document.getElementById('search-section');
+        const editSection = document.getElementById('edit-section');
+        const alertBox = document.getElementById('alert-box');
+
+        function showLoading(msg) {
+            loadingText.innerText = msg;
+            loadingScreen.classList.remove('hidden');
+            alertBox.classList.add('hidden');
+        }
+
+        function hideLoading() {
+            loadingScreen.classList.add('hidden');
+        }
+
+        function showAlert(msg, type) {
+            alertBox.innerText = msg;
+            alertBox.className = `mt-4 p-4 rounded-lg text-sm font-medium text-center ${type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`;
+            alertBox.classList.remove('hidden');
+        }
+
+        function cancelEdit() {
+            editSection.classList.add('hidden');
+            searchSection.classList.remove('hidden');
+            document.getElementById('search-form').reset();
+            alertBox.classList.add('hidden');
+        }
+
+        // --- ค้นหาข้อมูล ---
+        document.getElementById('search-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const classNum = document.getElementById('s_class').value;
+            const fname = document.getElementById('s_fname').value;
+            const lname = document.getElementById('s_lname').value;
+
+            if(fname.length < 5 || lname.length < 5) {
+                showAlert("กรุณาพิมพ์ชื่อและนามสกุลอย่างน้อย 5 ตัวอักษร", "error");
+                return;
+            }
+
+            showLoading("กำลังค้นหาข้อมูล...");
+
+            try {
+                const response = await fetch(GAS_WEBAPP_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'search',
+                        classNum: classNum,
+                        fname: fname,
+                        lname: lname
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    populateEditForm(result.data);
+                } else {
+                    showAlert("ไม่พบข้อมูล หรือระบุข้อมูลไม่ตรงเงื่อนไข", "error");
+                }
+            } catch (error) {
+                showAlert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์", "error");
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // --- เติมข้อมูลลงฟอร์มแก้ไข ---
+        function populateEditForm(data) {
+            currentUserRowIndex = data.rowIndex;
+            
+            // แสดงชื่อเต็ม
+            const fullName = `${data.prename || ''}${data.fname || ''} ${data.lname || ''}`;
+            document.getElementById('display-fullname').innerText = fullName;
+
+            // แสดงรูปภาพ
+            const imgEl = document.getElementById('profile-img');
+            const placeholder = document.getElementById('profile-placeholder');
+            if (data.picUrl) {
+                imgEl.src = data.picUrl;
+                imgEl.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            } else {
+                imgEl.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            }
+
+            // เติมข้อมูลในช่อง Input
+            const fields = ['name', 'nameeng', 'idmd', 'hn', 'offadd', 'offtel', 'homeadd', 'hometel', 'email', 'email2', 'board', 'subboard', 'note'];
+            fields.forEach(f => {
+                if(document.getElementById(`e_${f}`)) {
+                    document.getElementById(`e_${f}`).value = data[f] || '';
+                }
+            });
+
+            // สลับหน้าจอ
+            searchSection.classList.add('hidden');
+            editSection.classList.remove('hidden');
+            alertBox.classList.add('hidden');
+        }
+
+        // --- อัปเดตข้อมูล ---
+        document.getElementById('update-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            showLoading("กำลังบันทึกข้อมูล...");
+
+            // เก็บค่าที่จะอัปเดต
+            const updateData = {
+                name: document.getElementById('e_name').value,
+                nameeng: document.getElementById('e_nameeng').value,
+                idmd: document.getElementById('e_idmd').value,
+                hn: document.getElementById('e_hn').value,
+                offadd: document.getElementById('e_offadd').value,
+                offtel: document.getElementById('e_offtel').value,
+                homeadd: document.getElementById('e_homeadd').value,
+                hometel: document.getElementById('e_hometel').value,
+                email: document.getElementById('e_email').value,
+                email2: document.getElementById('e_email2').value,
+                board: document.getElementById('e_board').value,
+                subboard: document.getElementById('e_subboard').value,
+                note: document.getElementById('e_note').value,
+                line_displayName: lineProfile.displayName,
+                line_uid: lineProfile.userId
+            };
+
+            try {
+                const response = await fetch(GAS_WEBAPP_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'update',
+                        rowIndex: currentUserRowIndex,
+                        data: updateData
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert("บันทึกข้อมูลเรียบร้อยแล้ว!", "success");
+                    // กลับไปหน้าแรกหลังจาก 2 วินาที
+                    setTimeout(() => cancelEdit(), 2000);
+                } else {
+                    showAlert("ไม่สามารถบันทึกข้อมูลได้", "error");
+                }
+            } catch (error) {
+                showAlert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์", "error");
+            } finally {
+                hideLoading();
+            }
+        });
+
+    </script>
+</body>
+</html>
