@@ -19,7 +19,7 @@
     <div class="w-full max-w-lg bg-white rounded-2xl shadow-lg overflow-hidden">
         <!-- Header -->
         <div class="bg-blue-600 text-white p-6 text-center">
-            <h1 class="text-xl font-semibold">ปรับปรุงข้อมูลศิษย์เก่ารามาธิบดี </h1>
+            <h1 class="text-xl font-semibold">ปรับปรุงข้อมูลศิษย์เก่ารามาธิบดี</h1>
             <p class="text-sm mt-1 text-blue-100" id="user-greeting">กำลังเตรียมความพร้อม...</p>
         </div>
 
@@ -159,7 +159,25 @@
         // ==========================================
 
         let currentUserRowIndex = null;
+        let currentOriginalData = null; // เพิ่มตัวแปรสำหรับเก็บข้อมูลต้นฉบับ
         let lineProfile = { displayName: 'WebUser', userId: 'None' };
+
+        // --- ฟังก์ชันช่วยเหลือ (แก้ปัญหาหัวคอลัมน์ใน Sheet มีตัวพิมพ์เล็ก/ใหญ่ หรือเว้นวรรค) ---
+        function getVal(data, key) {
+            const normKey = key.toLowerCase().trim();
+            for (let k in data) {
+                if (k.toLowerCase().trim() === normKey) return data[k] || '';
+            }
+            return '';
+        }
+
+        function getOriginalKey(data, key) {
+            const normKey = key.toLowerCase().trim();
+            for (let k in data) {
+                if (k.toLowerCase().trim() === normKey) return k;
+            }
+            return key; // กรณีหาไม่เจอ ให้คืนค่า key เดิม
+        }
 
         // โหลดฟังก์ชันเริ่มต้นเมื่อเปิดหน้าเว็บ
         window.onload = function() {
@@ -238,7 +256,8 @@
             userListDiv.innerHTML = '';
             
             dataArray.forEach((user) => {
-                const fullName = `${user.prename || ''}${user.fname || ''} ${user.lname || ''}`;
+                // ดึงข้อมูลผ่าน getVal เพื่อป้องกันปัญหาพิมพ์ชื่อคอลัมน์ไม่ตรง
+                const fullName = `${getVal(user, 'prename')}${getVal(user, 'fname')} ${getVal(user, 'lname')}`.trim();
                 const userCard = document.createElement('div');
                 userCard.className = 'p-4 border border-gray-200 rounded-lg hover:bg-blue-50 cursor-pointer flex items-center gap-4 transition shadow-sm bg-white';
                 
@@ -252,8 +271,8 @@
                 userCard.innerHTML = `
                     ${picHtml}
                     <div class="overflow-hidden">
-                        <div class="font-medium text-gray-800 truncate">${fullName}</div>
-                        <div class="text-xs text-gray-500 truncate">รุ่น ${user.class || '-'} | เลข ว. ${user.idmd || '-'}</div>
+                        <div class="font-medium text-gray-800 truncate">${fullName || 'ไม่ระบุชื่อ'}</div>
+                        <div class="text-xs text-gray-500 truncate">รุ่น ${getVal(user, 'class') || '-'} | เลข ว. ${getVal(user, 'idmd') || '-'}</div>
                     </div>
                 `;
                 userListDiv.appendChild(userCard);
@@ -265,9 +284,10 @@
         // --- ฟังก์ชันดึงข้อมูลเติมลงในฟอร์มแก้ไข ---
         function populateEditForm(data) {
             currentUserRowIndex = data.rowIndex;
+            currentOriginalData = data; // บันทึกข้อมูลต้นฉบับไว้ใช้อ้างอิงตอนอัปเดต
             
-            // แสดงชื่อเต็ม
-            const fullName = `${data.prename || ''}${data.fname || ''} ${data.lname || ''}`;
+            // แสดงชื่อเต็ม (ดึงผ่าน getVal เพื่อตัดปัญหาคอลัมน์เพี้ยน)
+            const fullName = `${getVal(data, 'prename')}${getVal(data, 'fname')} ${getVal(data, 'lname')}`.trim();
             document.getElementById('display-fullname').innerText = fullName;
 
             // แสดงรูปภาพ
@@ -286,7 +306,7 @@
             const fields = ['name', 'nameeng', 'idmd', 'hn', 'offadd', 'offtel', 'homeadd', 'hometel', 'email', 'email2', 'board', 'subboard', 'note'];
             fields.forEach(f => {
                 if(document.getElementById(`e_${f}`)) {
-                    document.getElementById(`e_${f}`).value = data[f] || '';
+                    document.getElementById(`e_${f}`).value = getVal(data, f);
                 }
             });
 
@@ -351,24 +371,18 @@
             e.preventDefault();
             showLoading("กำลังบันทึกข้อมูล...");
 
-            // เก็บค่าที่จะอัปเดต
-            const updateData = {
-                name: document.getElementById('e_name').value,
-                nameeng: document.getElementById('e_nameeng').value,
-                idmd: document.getElementById('e_idmd').value,
-                hn: document.getElementById('e_hn').value,
-                offadd: document.getElementById('e_offadd').value,
-                offtel: document.getElementById('e_offtel').value,
-                homeadd: document.getElementById('e_homeadd').value,
-                hometel: document.getElementById('e_hometel').value,
-                email: document.getElementById('e_email').value,
-                email2: document.getElementById('e_email2').value,
-                board: document.getElementById('e_board').value,
-                subboard: document.getElementById('e_subboard').value,
-                note: document.getElementById('e_note').value,
-                line_displayName: lineProfile.displayName, // จะมีค่าถ้าเปิดใน LINE
-                line_uid: lineProfile.userId
-            };
+            // เก็บค่าที่จะอัปเดต โดยจับคู่กับหัวคอลัมน์ (Key) เดิมเป๊ะๆ กลับไปให้ชีต
+            const updateData = {};
+            const fieldsToUpdate = ['name', 'nameeng', 'idmd', 'hn', 'offadd', 'offtel', 'homeadd', 'hometel', 'email', 'email2', 'board', 'subboard', 'note'];
+            
+            fieldsToUpdate.forEach(f => {
+                const originalKey = getOriginalKey(currentOriginalData, f);
+                updateData[originalKey] = document.getElementById(`e_${f}`).value;
+            });
+
+            // ใส่ข้อมูล Line โดยใช้ Key ต้นฉบับ
+            updateData[getOriginalKey(currentOriginalData, 'line_displayName')] = lineProfile.displayName;
+            updateData[getOriginalKey(currentOriginalData, 'line_uid')] = lineProfile.userId;
 
             try {
                 const response = await fetch(GAS_WEBAPP_URL, {
