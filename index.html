@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบปรับปรุงข้อมูลสมาชิกรามาธิบดี</title>
+    <title>ปรับปรุงข้อมูลศิษย์เก่ารามาธิบดี</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -41,7 +41,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">รุ่น (Class)</label>
                         <!-- เปลี่ยนเป็น type="text" เพื่อรองรับตัวอักษร เช่น D6 หรือตัวเลขล้วน -->
-                        <input type="text" id="s_class" required placeholder="เลขรุ่น 6, 49 หรือ D42, 00 อาจารย์" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                        <input type="text" id="s_class" required placeholder="เลขรุ่นหรือ D แพทย์ประจำบ้าน, 00 อาจารย์" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ (ไม่ระบุคำนำหน้า)</label>
@@ -133,7 +133,8 @@
                         </div>
                         <div class="md:col-span-2">
                             <label class="block text-xs font-medium text-gray-500 mb-1">หมายเหตุ (note)</label>
-                            <input type="text" id="e_note" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500">
+                            <!-- เปลี่ยน input เป็น textarea และตั้งค่า rows="4" -->
+                            <textarea id="e_note" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm outline-none focus:border-blue-500 transition-colors duration-200"></textarea>
                         </div>
                     </div>
 
@@ -156,11 +157,11 @@
 
     <script>
         // ==========================================
-        // ตั้งค่า URL ของ Google Apps Script ที่ Deploy ได้
-        const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxpz3yDVzvDnPOAZ5MKXYFezP97F8r4RuTCgZQBW9eJoo9twINRv8OrYqDMIv1TTXk/exec"; 
+        // 1. ตั้งค่า URL ของ Google Apps Script (Web App URL)
+        const GAS_WEBAPP_URL = "YOUR_GOOGLE_APP_SCRIPT_WEB_APP_URL"; 
         
-        // ตั้งค่า LIFF ID ของคุณ
-        const LIFF_ID = "2009266904-HNFVPDlF"; 
+        // 2. ตั้งค่า LIFF ID (ได้จาก LINE Developers)
+        const LIFF_ID = "YOUR_LIFF_ID"; 
         // ==========================================
 
         let currentUserRowIndex = null;
@@ -187,7 +188,35 @@
         // โหลดฟังก์ชันเริ่มต้นเมื่อเปิดหน้าเว็บ
         window.onload = function() {
             initializeLiff();
+            setupHighlightListeners(); // เรียกฟังก์ชันตรวจสอบการแก้ไขข้อมูล
         };
+
+        // --- ฟังก์ชันดักจับการพิมพ์เพื่อไฮไลท์สีเขียวช่องที่ถูกแก้ไข ---
+        function setupHighlightListeners() {
+            const fieldsToUpdate = ['name', 'nameeng', 'idmd', 'hn', 'offadd', 'offtel', 'homeadd', 'hometel', 'email', 'email2', 'board', 'subboard', 'note'];
+            fieldsToUpdate.forEach(f => {
+                const el = document.getElementById(`e_${f}`);
+                if(el) {
+                    el.addEventListener('input', (e) => {
+                        if (!currentOriginalData) return;
+                        
+                        // เทียบค่าปัจจุบันที่พิมพ์ กับค่าดั้งเดิมจากฐานข้อมูล
+                        const originalVal = String(getVal(currentOriginalData, f) || '').trim();
+                        const currentVal = String(e.target.value || '').trim();
+                        
+                        // ถ้าค่าเปลี่ยนไป ให้ใส่สีเขียวอ่อน
+                        if (originalVal !== currentVal) {
+                            el.classList.add('bg-green-50', 'border-green-500', 'text-green-900');
+                            el.classList.remove('border-gray-300');
+                        } else {
+                            // ถ้าลบกลับมาเหมือนเดิม ให้เอาสีเขียวออก
+                            el.classList.remove('bg-green-50', 'border-green-500', 'text-green-900');
+                            el.classList.add('border-gray-300');
+                        }
+                    });
+                }
+            });
+        }
 
         async function initializeLiff() {
             // ดักจับ Error ไว้ก่อนเลย กรณีที่ยังไม่ได้ตั้งค่า LIFF_ID หรือตั้งเป็นค่าเริ่มต้นไว้
@@ -310,8 +339,12 @@
             // เติมข้อมูลในช่อง Input ให้ครบทุก Field
             const fields = ['name', 'nameeng', 'idmd', 'hn', 'offadd', 'offtel', 'homeadd', 'hometel', 'email', 'email2', 'board', 'subboard', 'note'];
             fields.forEach(f => {
-                if(document.getElementById(`e_${f}`)) {
-                    document.getElementById(`e_${f}`).value = getVal(data, f);
+                const el = document.getElementById(`e_${f}`);
+                if(el) {
+                    el.value = getVal(data, f);
+                    // รีเซ็ตไฮไลท์สีกลับเป็นปกติ (เผื่อมีการแก้ไขค้างไว้ก่อนหน้านี้)
+                    el.classList.remove('bg-green-50', 'border-green-500', 'text-green-900');
+                    el.classList.add('border-gray-300');
                 }
             });
 
